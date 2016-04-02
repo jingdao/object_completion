@@ -68,6 +68,7 @@ class Model:
 							ly.w = toNumpyArray(f)
 						elif line.startswith('uw'):
 							ly.uw = toNumpyArray(f)
+							ly.w = ly.uw
 						elif line.startswith('dw'):
 							ly.dw = toNumpyArray(f)
 						elif line.startswith('c'):

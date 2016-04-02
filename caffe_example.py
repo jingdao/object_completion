@@ -1,4 +1,5 @@
 import sys
+import time
 caffe_root = '/home/jd/Downloads/caffe/'  # this file is expected to be $
 sys.path.insert(0, caffe_root + 'python')
 import caffe
@@ -33,25 +34,17 @@ solver.net.blobs['label'].reshape(batchsize)
 
 def initialize_missing(data):
 	mask = data < 0
-	filler = numpy.random.rand(len(data[mask]))
+	filler = numpy.random.rand(len(data[mask])) > 0.1
 	res = data.copy()
 	res[mask] = filler
 	return res
 
-label = -1
-j = 0
-for i in range(batchsize/2):
-	while partial_views.labels[j] == label:
-		j += 1
-	label = partial_views.labels[j]
-#	solver.net.blobs['data'].data[i,0,:,:,:] = initialize_missing(partial_views.samples[j])
-	solver.net.blobs['data'].data[i,0,:,:,:] = complete_views.samples[j]
-	solver.net.blobs['label'].data[2*i] = label
-	j += 1
-	solver.net.blobs['data'].data[i,0,:,:,:] = complete_views.samples[j]
-	solver.net.blobs['label'].data[2*i+1] = label
-	j += 1
-print solver.net.blobs['label'].data
+for i in range(batchsize):
+	index = numpy.random.randint(partial_views.num_samples) 
+	label = partial_views.labels[index]
+	solver.net.blobs['data'].data[i,0,:,:,:] = initialize_missing(partial_views.samples[index].transpose())
+#	solver.net.blobs['data'].data[i,0,:,:,:] = complete_views.samples[index].transpose()
+	solver.net.blobs['label'].data[i] = label - 1
 
 # initialize wights and bias
 # Load parameters
@@ -83,25 +76,13 @@ solver.net.params['fc5'][1].data[...] = network.layers[4].c[0,:]
 solver.net.params['fc6'][0].data[...] = network.layers[5].w.transpose()
 solver.net.params['fc6'][1].data[...] = network.layers[5].c[0,:]
 
-#for i in range(network.layers[1].w.shape[0]):
-#	solver.net.params['conv1'][0].data[i,0,:,:,:] = network.layers[1].w[i,:,:,:]
-#solver.net.params['conv1'][1].data[...] = network.layers[1].c[:,0]
-#for i in range(network.layers[2].w.shape[0]):
-#	for j in range(network.layers[2].w.shape[4]):
-#		solver.net.params['conv2'][0].data[i,j,:,:,:] = network.layers[2].w[i,:,:,:,j]
-#solver.net.params['conv2'][1].data[...] = network.layers[2].c[:,0]
-#for i in range(network.layers[3].w.shape[0]):
-#	for j in range(network.layers[3].w.shape[4]):
-#		solver.net.params['conv3'][0].data[i,j,:,:,:] = network.layers[3].w[i,:,:,:,j]
-#solver.net.params['conv3'][1].data[...] = network.layers[3].c[:,0]
-#solver.net.params['fc5'][0].data[...] = network.layers[4].w.transpose()
-#solver.net.params['fc5'][1].data[...] = network.layers[4].c[0,:]
-#solver.net.params['fc6'][0].data[...] = network.layers[5].w.transpose()
-#solver.net.params['fc6'][1].data[...] = network.layers[5].c[0,:]
-
 print(termcolors.yellow+'forward pass'+termcolors.normal)
+start = time.clock()
 loss = solver.net.forward()
+end = time.clock()
 print loss
 act_fc6 = solver.net.blobs['act_fc6'].data
 prediction = numpy.argmax(act_fc6,axis=1)
-print 'prediction ',prediction
+print 'prediction label ',prediction
+print 'actual label     ',numpy.array(solver.net.blobs['label'].data,dtype=numpy.int)
+print(termcolors.yellow+'forward pass for '+str(batchsize)+' samples took '+str(end-start)+' seconds'+termcolors.normal)
