@@ -1,0 +1,440 @@
+name: "3dNetReg"
+
+# batch_size = 64
+
+layer {
+  name: "dummy"
+  type: "DummyData"
+  top: "data"
+  top: "label"
+  dummy_data_param {
+    shape { dim: 64 dim: 1 dim: 30 dim: 30 dim: 30 }
+    shape { dim: 64 dim: 1 dim: 30 dim: 30 dim: 30  }
+  }
+}
+
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+  convolution_param {
+    num_output: 48
+		stride: 2
+    # specifies the index of the "channels" axis --
+    # may be omitted as 1 is the default
+    axis: 1
+
+    kernel_size: 6
+		kernel_size: 6
+		kernel_size: 6
+
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+
+  }
+}
+
+
+layer {
+  name: "sigmoid1"
+  bottom: "conv1"
+  top: "act_conv1"
+  type: "Sigmoid"
+}
+
+
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "act_conv1"
+  top: "conv2"
+  convolution_param {
+    num_output: 160
+		stride: 2
+    # specifies the index of the "channels" axis --
+    # may be omitted as 1 is the default
+    axis: 1
+
+    kernel_size: 5
+		kernel_size: 5
+		kernel_size: 5
+
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+
+  }
+}
+
+layer {
+  name: "sigmoid2"
+  bottom: "conv2"
+  top: "act_conv2"
+  type: "Sigmoid"
+}
+
+
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "act_conv2"
+  top: "conv3"
+  convolution_param {
+    num_output: 512
+		stride: 1
+    # specifies the index of the "channels" axis --
+    # may be omitted as 1 is the default
+    axis: 1
+
+    kernel_size: 4
+		kernel_size: 4
+		kernel_size: 4
+
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+
+  }
+}
+
+layer {
+  name: "sigmoid3"
+  bottom: "conv3"
+  top: "act_conv3"
+  type: "Sigmoid"
+}
+
+
+layer {
+  name: "reshape4"
+  type: "Reshape"
+  bottom: "act_conv3"
+  top: "reshape4"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+
+
+
+layer {
+  name: "fc5"
+  type: "InnerProduct"
+  bottom: "reshape4"
+  top: "fc5"
+  
+  # learning rate and decay multipliers for the weights
+  param { lr_mult: 1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 1200
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "sigmoid5"
+  bottom: "fc5"
+  top: "act_fc5"
+  type: "Sigmoid"
+}
+
+
+layer {
+  name: "inn_fc1"
+  type: "InnerProduct"
+  bottom: "act_fc5"
+  top: "inn_fc1"
+  
+  # learning rate and decay multipliers for the weights
+  param { lr_mult: 1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 400
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "inn_sigmoid1"
+  bottom: "inn_fc1"
+  top: "act_inn_fc1"
+  type: "Sigmoid"
+}
+
+
+
+layer {
+  name: "inn_fc2"
+  type: "InnerProduct"
+  bottom: "act_inn_fc1"
+  top: "inn_fc2"
+  
+  # learning rate and decay multipliers for the weights
+  param { lr_mult: 1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 1200
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "inn_sigmoid2"
+  bottom: "inn_fc2"
+  top: "act_inn_fc2"
+  type: "Sigmoid"
+}
+
+
+
+
+
+layer {
+  name: "b_fc5"
+  type: "InnerProduct"
+  bottom: "act_inn_fc2"
+  top: "b_fc5"
+  
+  # learning rate and decay multipliers for the weights
+  param { lr_mult: 1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 4096
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "b_sigmoid5"
+  bottom: "b_fc5"
+  top: "act_b_fc5"
+  type: "Sigmoid"
+}
+
+
+
+
+
+layer {
+  name: "b_reshape4"
+  type: "Reshape"
+  bottom: "act_b_fc5"
+  top: "b_reshape4"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: 512
+      dim: 2
+      dim: 2
+      dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+
+
+
+layer {
+  name: "b_conv3"
+  type: "Deconvolution"
+  bottom: "b_reshape4"
+  top: "b_conv3"
+  convolution_param {
+    num_output: 160
+		stride: 1
+    # specifies the index of the "channels" axis --
+    # may be omitted as 1 is the default
+    axis: 1
+
+    kernel_size: 4
+		kernel_size: 4
+		kernel_size: 4
+
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+
+layer {
+  name: "b_sigmoid3"
+  bottom: "b_conv3"
+  top: "act_b_conv3"
+  type: "Sigmoid"
+}
+
+
+layer {
+  name: "b_conv2"
+  type: "Deconvolution"
+  bottom: "act_b_conv3"
+  top: "b_conv2"
+  convolution_param {
+    num_output: 48
+	 stride: 2
+    # specifies the index of the "channels" axis --
+    # may be omitted as 1 is the default
+    axis: 1
+
+    kernel_size: 5
+		kernel_size: 5
+		kernel_size: 5
+
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+
+  }
+}
+
+
+layer {
+  name: "b_sigmoid2"
+  bottom: "b_conv2"
+  top: "act_b_conv2"
+  type: "Sigmoid"
+}
+
+
+
+layer {
+  name: "b_conv1"
+  type: "Deconvolution"
+  bottom: "act_b_conv2"
+  top: "b_conv1"
+  convolution_param {
+    num_output: 1
+		stride: 2
+    # specifies the index of the "channels" axis --
+    # may be omitted as 1 is the default
+    axis: 1
+
+    kernel_size: 6
+		kernel_size: 6
+		kernel_size: 6
+
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+
+  }
+}
+
+
+layer {
+  name: "b_sigmoid1"
+  bottom: "b_conv1"
+  top: "act_b_conv1"
+  type: "Sigmoid"
+}
+
+
+# Loss
+
+layer {
+  name: "l_reshape1"
+  type: "Reshape"
+  bottom: "act_b_conv1"
+  top: "l_reshape1"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+
+
+
+layer {
+  name: "l_reshape2"
+  type: "Reshape"
+  bottom: "label"
+  top: "l_reshape2"
+  reshape_param {
+    shape {
+      dim: 0
+      dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+
+
+layer {
+  type: "EuclideanLoss"
+  bottom: "l_reshape1"
+  bottom: "l_reshape2"
+  top: "loss"
+}
+
+
