@@ -73,11 +73,52 @@ def initialize_missing(data):
 	return res
 
 print(termcolors.yellow+'forward pass'+termcolors.normal)
-inputData = initialize_missing(partial_views.samples[0])
-referenceData = complete_views.samples[0]
-solver.net.blobs['data'].data[0,0,:,:,:] = inputData
-solver.net.blobs['label'].data[0,0,:,:,:] = referenceData
+
+
+'''
 loss = solver.net.forward()
 outputData = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
 print loss
 comparePlots(inputData,outputData,referenceData)
+'''
+
+niter = 200
+test_interval = 25
+# losses will also be stored in the log
+train_loss = numpy.zeros(niter)
+test_acc = numpy.zeros(int(numpy.ceil(niter / test_interval)))
+output = numpy.zeros((niter, 8, 10))
+
+# the main solver loop
+loss = solver.net.forward()
+solver.net.backward()
+for it in range(niter):
+	inputData = initialize_missing(partial_views.samples[it])
+	referenceData = complete_views.samples[it]
+	solver.net.blobs['data'].data[0,0,:,:,:] = inputData
+	solver.net.blobs['label'].data[0,0,:,:,:] = referenceData
+	solver.step(1)  # SGD by Caffe
+	#loss = solver.net.forward()
+	#solver.net.backward()
+    
+    # store the train loss
+	train_loss[it] = solver.net.blobs['loss'].data
+	print train_loss[it]
+'''
+    # store the output on the first test batch
+    # (start the forward pass at conv1 to avoid loading new data)
+    solver.test_nets[0].forward(start='conv1')
+    output[it] = solver.test_nets[0].blobs['score'].data[:8]
+    
+    # run a full test every so often
+    # (Caffe can also do this for us and write to a log, but we show here
+    #  how to do it directly in Python, where more complicated things are easier.)
+    if it % test_interval == 0:
+        print 'Iteration', it, 'testing...'
+        correct = 0
+        for test_it in range(100):
+            solver.test_nets[0].forward()
+            correct += sum(solver.test_nets[0].blobs['score'].data.argmax(1)
+                           == solver.test_nets[0].blobs['label'].data)
+        test_acc[it // test_interval] = correct / 1e4
+	'''
