@@ -1,0 +1,7 @@
+//login to jinx master node
+ssh -X gt_account@jinx-login.cc.gatech.edu
+//secure copy files from local to master node
+scp -r local_folder gt_account@jinx-login.cc.gatech.edu:master_folder
+//torch is installed on jinx
+//caffe is not supported
+
