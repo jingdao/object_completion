@@ -32,7 +32,7 @@ class Layer:
 
 class Model:
 	def __init__(self,filename):
-		f = open(filename,'r')
+		f = open(filename,'rb')
 		self.isGenerative = not 'discriminative' in filename
 		self.layers = []
 		while True:

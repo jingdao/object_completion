@@ -20,7 +20,7 @@ layer {
   bottom: "data"
   top: "conv1"
   convolution_param {
-    num_output: 48
+    num_output: 80
 		stride: 2
     # specifies the index of the "channels" axis --
     # may be omitted as 1 is the default

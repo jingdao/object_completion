@@ -1,7 +1,5 @@
 import sys
 import time
-caffe_root = '/home/jd/Downloads/caffe/'  # this file is expected to be $
-sys.path.insert(0, caffe_root + 'python')
 import caffe
 caffe.set_mode_cpu()
 #from caffe import layers as L, params as P
@@ -42,8 +40,8 @@ def initialize_missing(data):
 for i in range(batchsize):
 	index = numpy.random.randint(partial_views.num_samples) 
 	label = partial_views.labels[index]
-	solver.net.blobs['data'].data[i,0,:,:,:] = initialize_missing(partial_views.samples[index].transpose())
-#	solver.net.blobs['data'].data[i,0,:,:,:] = complete_views.samples[index].transpose()
+	solver.net.blobs['data'].data[i,0,:,:,:] = initialize_missing(partial_views.samples[index])
+#	solver.net.blobs['data'].data[i,0,:,:,:] = complete_views.samples[index]
 	solver.net.blobs['label'].data[i] = label - 1
 
 # initialize wights and bias
@@ -63,13 +61,15 @@ print solver.net.params['fc5'][0].data.shape
 print solver.net.params['fc6'][0].data.shape
 
 for i in range(network.layers[1].w.shape[0]):
-	solver.net.params['conv1'][0].data[i,0,:,:,:] = network.layers[1].w[i,:,:,:].transpose()
+	solver.net.params['conv1'][0].data[i,0,:,:,:] = network.layers[1].w[i,:,:,:]
 solver.net.params['conv1'][1].data[...] = network.layers[1].c[:,0]
 for i in range(network.layers[2].w.shape[0]):
-	solver.net.params['conv2'][0].data[i,:,:,:,:] = network.layers[2].w[i,:,:,:,:].transpose()
+	for j in range(network.layers[2].w.shape[4]):
+		solver.net.params['conv2'][0].data[i,j,:,:,:] = network.layers[2].w[i,:,:,:,j]
 solver.net.params['conv2'][1].data[...] = network.layers[2].c[:,0]
 for i in range(network.layers[3].w.shape[0]):
-	solver.net.params['conv3'][0].data[i,:,:,:,:] = network.layers[3].w[i,:,:,:,:].transpose()
+	for j in range(network.layers[3].w.shape[4]):
+		solver.net.params['conv3'][0].data[i,j,:,:,:] = network.layers[3].w[i,:,:,:,j]
 solver.net.params['conv3'][1].data[...] = network.layers[3].c[:,0]
 solver.net.params['fc5'][0].data[...] = network.layers[4].w.transpose()
 solver.net.params['fc5'][1].data[...] = network.layers[4].c[0,:]
