@@ -14,9 +14,71 @@ layer {
 }
 
 layer {
-  name: "b_fc5"
+  name: "inn_fc1"
   type: "InnerProduct"
   bottom: "data"
+  top: "inn_fc1"
+  
+  # learning rate and decay multipliers for the weights
+  param { lr_mult: 1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 400
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "inn_sigmoid1"
+  bottom: "inn_fc1"
+  top: "act_inn_fc1"
+  type: "Sigmoid"
+}
+
+
+
+layer {
+  name: "inn_fc2"
+  type: "InnerProduct"
+  bottom: "act_inn_fc1"
+  top: "inn_fc2"
+  
+  # learning rate and decay multipliers for the weights
+  param { lr_mult: 1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 2 decay_mult: 0 }
+  inner_product_param {
+    num_output: 1200
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "inn_sigmoid2"
+  bottom: "inn_fc2"
+  top: "act_inn_fc2"
+  type: "Sigmoid"
+}
+
+layer {
+  name: "b_fc5"
+  type: "InnerProduct"
+  bottom: "act_inn_fc2"
   top: "b_fc5"
   
   # learning rate and decay multipliers for the weights
@@ -64,6 +126,9 @@ layer {
   type: "Deconvolution"
   bottom: "b_reshape4"
   top: "b_conv3"
+  param { lr_mult: 0.1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 0.2 decay_mult: 0 }
   convolution_param {
     num_output: 160
 		stride: 1
@@ -99,6 +164,9 @@ layer {
   type: "Deconvolution"
   bottom: "act_b_conv3"
   top: "b_conv2"
+  param { lr_mult: 0.1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 0.2 decay_mult: 0 }
   convolution_param {
     num_output: 80
 		stride: 2
@@ -134,6 +202,9 @@ layer {
   type: "Deconvolution"
   bottom: "act_b_conv2"
   top: "b_conv1"
+  param { lr_mult: 0.1 decay_mult: 1 }
+  # learning rate and decay multipliers for the biases
+  param { lr_mult: 0.2 decay_mult: 0 }
   convolution_param {
     num_output: 1
 		stride: 2

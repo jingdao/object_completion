@@ -5,7 +5,7 @@ caffe.set_mode_cpu()
 from importWeights import *
 from importViews import *
 
-network = Model("discriminative_10_class.txt")
+network = Model("finetuned_model.txt")
 partial_views = GridData('partial_view.data','labels.data')
 
 solver = caffe.SGDSolver('3Dshapenet_solver.prototxt')
@@ -23,8 +23,8 @@ for i in range(network.layers[3].w.shape[0]):
 solver.net.params['conv3'][1].data[...] = network.layers[3].c[:,0]
 solver.net.params['fc5'][0].data[...] = network.layers[4].w.transpose()
 solver.net.params['fc5'][1].data[...] = network.layers[4].c[0,:]
-solver.net.params['fc6'][0].data[...] = network.layers[5].w.transpose()
-solver.net.params['fc6'][1].data[...] = network.layers[5].c[0,:]
+#solver.net.params['fc6'][0].data[...] = network.layers[5].w.transpose()
+#solver.net.params['fc6'][1].data[...] = network.layers[5].c[0,:]
 
 def initialize_missing(data):
 	mask = data < 0

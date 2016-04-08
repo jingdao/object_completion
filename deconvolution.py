@@ -17,9 +17,11 @@ features = numpy.load('features.npy')
 complete_views = GridData('complete_view.data','labels.data')
 solver = caffe.SGDSolver('Net3DReg_solver_deconv.prototxt')
 print(termcolors.red+'initialized solver'+termcolors.normal)
-batchsize = 1;
-solver.net.blobs['data'].reshape(batchsize,1,1200)
+batchsize = 5;
+solver.net.blobs['data'].reshape(batchsize,1200)
+solver.test_nets[0].blobs['data'].reshape(batchsize,1200)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
+solver.test_nets[0].blobs['label'].reshape(batchsize,1,30,30,30)
 
 print(termcolors.blue+'assign weights'+termcolors.normal)
 print(termcolors.blue+'matlab weights'+termcolors.normal)
@@ -58,10 +60,44 @@ for i in range(network.layers[1].dw.shape[0]):
 b = network.layers[1].b
 solver.net.params['b_conv1'][1].data[...] = b.transpose().reshape((1,-1)).mean()
 
-print(termcolors.yellow+'forward pass'+termcolors.normal)
-solver.net.blobs['data'].data[0,0,:] = features[0,:]
-solver.net.blobs['label'].data[0,0,:,:,:] = complete_views.samples[0]
-loss = solver.net.forward()
+
+numTraining = complete_views.num_samples - batchsize
+for i in range(batchsize):
+	inputData = features[numTraining+i,:]
+	referenceData = complete_views.samples[numTraining+i]
+	solver.test_nets[0].blobs['data'].data[i,:] = inputData
+	solver.test_nets[0].blobs['label'].data[i,0,:,:,:] = referenceData
+
+print(termcolors.yellow+'forward pass '+str(numTraining)+' training '+str(complete_views.num_samples-numTraining)+' testing samples'+termcolors.normal)
+niter=100
+test_interval=20
+train_loss = numpy.zeros(niter)
+test_loss = numpy.zeros(niter/test_interval)
+for it in range(niter):
+	for j in range(batchsize):
+		id = (it * batchsize + j) % numTraining
+		inputData = features[id,:]
+		referenceData = complete_views.samples[id]
+		solver.net.blobs['data'].data[j,:] = inputData
+		solver.net.blobs['label'].data[j,0,:,:,:] = referenceData
+	start = time.clock()
+	solver.step(1)  # SGD by Caffe
+	end = time.clock()
+    
+    # store the train loss
+	train_loss[it] = solver.net.blobs['loss'].data
+	if it % test_interval == 0:
+		test_loss[it/test_interval] = solver.test_nets[0].blobs['loss'].data
+	print it,train_loss[it],end-start
+
+plt.subplot(2,1,1)
+plt.plot(train_loss)
+plt.subplot(2,1,2)
+plt.plot(test_loss)
+plt.show()
 output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
-print loss
-plotObject(output)
+fig = plt.figure()
+ax = fig.add_subplot(131, projection='3d')
+x,y,z = numpy.nonzero(output > 0.5)
+ax.scatter(x,y,z,c='r',s=10)
+plt.show()
