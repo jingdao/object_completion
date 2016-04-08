@@ -12,10 +12,10 @@ class termcolors:
 	blue = '\033[94m'
 	red = '\033[91m'
 
-network = Model("finetuned_model.txt")
-features = numpy.load('features.npy')
-complete_views = GridData('complete_view.data','labels.data')
-solver = caffe.SGDSolver('Net3DReg_solver_deconv.prototxt')
+network = Model("data/finetuned_model.txt")
+features = numpy.load('data/features.npy')
+complete_views = GridData('data/complete_view.data','data/labels.data')
+solver = caffe.SGDSolver('architecture/Net3DReg_solver_deconv.prototxt')
 print(termcolors.red+'initialized solver'+termcolors.normal)
 batchsize = 5;
 solver.net.blobs['data'].reshape(batchsize,1200)
