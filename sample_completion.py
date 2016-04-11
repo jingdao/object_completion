@@ -25,14 +25,16 @@ def comparePlots(obj1,obj2,obj3):
 	ax.scatter(x,y,z,c='r',s=10)
 	plt.show()
 
-network = Model("finetuned_model.txt")
-partial_views = GridData('partial_view.data','labels.data')
-complete_views = GridData('complete_view.data','labels.data')
-solver = caffe.SGDSolver('Net3DReg_solver.prototxt')
+network = Model("data/finetuned_model.txt")
+partial_views = GridData('data/partial_view.data','data/labels.data')
+complete_views = GridData('data/complete_view.data','data/labels.data')
+solver = caffe.SGDSolver('architecture/Net3DReg_solver.prototxt')
 print(termcolors.red+'initialized solver'+termcolors.normal)
 batchsize = 1;
 solver.net.blobs['data'].reshape(batchsize,1,30,30,30)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
+solver.test_nets[0].blobs['data'].reshape(batchsize,1,30,30,30)
+solver.test_nets[0].blobs['label'].reshape(batchsize,1,30,30,30)
 
 print(termcolors.blue+'assign weights'+termcolors.normal)
 for i in range(network.layers[1].w.shape[0]):
@@ -90,20 +92,24 @@ test_acc = numpy.zeros(int(numpy.ceil(niter / test_interval)))
 output = numpy.zeros((niter, 8, 10))
 
 # the main solver loop
-loss = solver.net.forward()
-solver.net.backward()
+solver.net.blobs['data'].data[0,0,:,:,:] = partial_views.samples[0]
+solver.net.blobs['label'].data[0,0,:,:,:] = complete_views.samples[0]
 for it in range(niter):
-	inputData = initialize_missing(partial_views.samples[it])
-	referenceData = complete_views.samples[it]
-	solver.net.blobs['data'].data[0,0,:,:,:] = inputData
-	solver.net.blobs['label'].data[0,0,:,:,:] = referenceData
+	for j in range(batchsize):
+		id = (it * batchsize + j) % partial_views.num_samples
+		inputData = initialize_missing(partial_views.samples[id])
+		referenceData = complete_views.samples[id]
+		solver.net.blobs['data'].data[j,0,:,:,:] = inputData
+		solver.net.blobs['label'].data[j,0,:,:,:] = referenceData
+	start = time.clock()
 	solver.step(1)  # SGD by Caffe
+	end = time.clock()
 	#loss = solver.net.forward()
 	#solver.net.backward()
     
     # store the train loss
 	train_loss[it] = solver.net.blobs['loss'].data
-	print train_loss[it]
+	print it,end-start,train_loss[it]
 '''
     # store the output on the first test batch
     # (start the forward pass at conv1 to avoid loading new data)
