@@ -1,14 +1,18 @@
 import sys
 import time
 import caffe
-caffe.set_mode_cpu()
+import os
+if os.system('nvcc --version') == 0:
+	caffe.set_mode_gpu()
+else:
+	caffe.set_mode_cpu()
 from importWeights import *
 from importViews import *
 
-network = Model("finetuned_model.txt")
-partial_views = GridData('partial_view.data','labels.data')
+network = Model("data/finetuned_model.txt")
+partial_views = GridData('data/partial_view.data','data/labels.data')
 
-solver = caffe.SGDSolver('3Dshapenet_solver.prototxt')
+solver = caffe.SGDSolver('architecture/3Dshapenet_solver.prototxt')
 batchsize = 10;
 solver.net.blobs['data'].reshape(batchsize,1,30,30,30)
 solver.net.blobs['label'].reshape(batchsize)
@@ -49,5 +53,5 @@ while j < partial_views.num_samples:
 	else:
 		features = numpy.copy(solver.net.blobs['act_fc5'].data)
 end = time.clock()
-numpy.save('features.npy',features)
+numpy.save('data/features.npy',features)
 print('forward pass for '+str(partial_views.num_samples)+' samples (batch='+str(batchsize)+') took '+str(end-start)+' seconds')

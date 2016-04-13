@@ -1,0 +1,5 @@
+*.swp
+data/
+*.pyc
+*.caffemodel
+*.solverstate

@@ -1,6 +1,6 @@
 # The train/test net protocol buffer definition
-train_net: "3Dshapenet_train.prototxt"
-test_net: "3Dshapenet_test.prototxt"
+train_net: "architecture/3Dshapenet_train.prototxt"
+test_net: "architecture/3Dshapenet_test.prototxt"
 # test_iter specifies how many forward passes the test should carry out.
 # In the case of MNIST, we have test batch size 100 and 100 test iterations,
 # covering the full 10,000 testing images.
