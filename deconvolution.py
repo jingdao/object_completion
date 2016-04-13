@@ -17,38 +17,21 @@ class termcolors:
 	blue = '\033[94m'
 	red = '\033[91m'
 
+debugSingleSample=True
+
 network = Model("data/finetuned_model.txt")
-features = numpy.load('data/chair_features.npy')
-partial_views = GridData('data/chair_partial.data','data/chair_labels.data')
-complete_views = GridData('data/chair_complete.data','data/chair_labels.data')
+features = numpy.load('data/table_features.npy')
+partial_views = GridData('data/table_partial.data','data/table_labels.data')
+complete_views = GridData('data/table_complete.data','data/table_labels.data')
 solver = caffe.SGDSolver('architecture/Net3DReg_solver_deconv.prototxt')
 print(termcolors.red+'initialized solver'+termcolors.normal)
-batchsize = 10;
+batchsize = 2;
 solver.net.blobs['data'].reshape(batchsize,1200)
 solver.test_nets[0].blobs['data'].reshape(batchsize,1200)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
 solver.test_nets[0].blobs['label'].reshape(batchsize,1,30,30,30)
 
 print(termcolors.blue+'assign weights'+termcolors.normal)
-print(termcolors.blue+'matlab weights'+termcolors.normal)
-print network.layers[4].dw.shape
-print network.layers[4].b.shape
-print network.layers[3].dw.shape
-print network.layers[3].b.shape
-print network.layers[2].dw.shape
-print network.layers[2].b.shape
-print network.layers[1].dw.shape
-print network.layers[1].b.shape
-print(termcolors.blue+'python weights'+termcolors.normal)
-print solver.net.params['b_fc5'][0].data.shape
-print solver.net.params['b_fc5'][1].data.shape
-print solver.net.params['b_conv3'][0].data.shape
-print solver.net.params['b_conv3'][1].data.shape
-print solver.net.params['b_conv2'][0].data.shape
-print solver.net.params['b_conv2'][1].data.shape
-print solver.net.params['b_conv1'][0].data.shape
-print solver.net.params['b_conv1'][1].data.shape
-
 solver.net.params['b_fc5'][0].data[...] = network.layers[4].dw
 solver.net.params['b_fc5'][1].data[...] = network.layers[4].b[0,:]
 for i in range(network.layers[3].dw.shape[0]):
@@ -66,24 +49,31 @@ for i in range(network.layers[1].dw.shape[0]):
 b = network.layers[1].b
 solver.net.params['b_conv1'][1].data[...] = b.transpose().reshape((1,-1)).mean()
 
-numTraining = complete_views.num_samples - batchsize
 trainIndices = []
 testIndices = []
 while (len(testIndices) < batchsize):
 	r = numpy.random.randint(complete_views.num_samples)
 	if not r in testIndices:
 		testIndices.append(r)
-for i in range(complete_views.num_samples):
-	if not i in testIndices:
-		trainIndices.append(i)
+if debugSingleSample:
+	while (len(trainIndices) < batchsize):
+		r = numpy.random.randint(complete_views.num_samples)
+		if not r in trainIndices:
+			trainIndices.append(r)
+else:
+	for i in range(complete_views.num_samples):
+		if not i in testIndices:
+			trainIndices.append(i)
+numTraining = len(trainIndices)
+numTesting = len(testIndices)
 for i in range(batchsize):
 	inputData = features[testIndices[i],:]
 	referenceData = complete_views.samples[testIndices[i]]
 	solver.test_nets[0].blobs['data'].data[i,:] = inputData
 	solver.test_nets[0].blobs['label'].data[i,0,:,:,:] = referenceData
 
-print(termcolors.yellow+'forward pass '+str(numTraining)+' training '+str(complete_views.num_samples-numTraining)+' testing samples'+termcolors.normal)
-niter=20
+print(termcolors.yellow+'forward pass '+str(numTraining)+' training '+str(numTesting)+' testing samples'+termcolors.normal)
+niter=100
 test_interval=20
 train_loss = numpy.zeros(niter)
 test_loss = numpy.zeros(niter/test_interval)
@@ -102,7 +92,10 @@ for it in range(niter):
 	train_loss[it] = solver.net.blobs['loss'].data
 	if it % test_interval == 0:
 		test_loss[it/test_interval] = solver.test_nets[0].blobs['loss'].data
-	print it,train_loss[it],end-start
+	#print it,train_loss[it],end-start
+	#for s in ['b_fc5','b_conv3','b_conv2','b_conv1']:
+		#d = solver.test_nets[0].blobs[s].data
+		#print s,numpy.min(d),numpy.mean(d),numpy.max(d)
 
 fig = plt.figure()
 plt.subplot(2,1,1)
@@ -111,17 +104,69 @@ plt.subplot(2,1,2)
 plt.plot(test_loss)
 plt.show()
 
+def initialize_missing(data):
+	mask = data < 0
+#	filler = numpy.random.rand(len(data[mask])) > 0.9
+	filler = numpy.ones(len(data[mask])) * 0.5
+	res = numpy.array(data,dtype=numpy.float32)
+	res[mask] = filler
+	return res
+
 for j in range(batchsize):
 	fig = plt.figure()
 	output = solver.test_nets[0].blobs['act_b_conv1'].data[j,0,:,:,:]
+	f = features[testIndices[j],:]
 	ax = fig.add_subplot(131, projection='3d')
-	x,y,z = numpy.nonzero(partial_views.samples[testIndices[j]])
-	ax.scatter(x,y,z,c='r',s=10)
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	src = initialize_missing(partial_views.samples[testIndices[j]])
+	x,y,z = numpy.nonzero(src)
+	color = src[x,y,z] * 2 - 1 
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
 	ax = fig.add_subplot(132, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
 	x,y,z = numpy.nonzero(output>0.1)
 	color = output[x,y,z]
 	ax.scatter(x,y,z,c=cm.jet(color),s=10)
 	ax = fig.add_subplot(133, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
 	x,y,z = numpy.nonzero(complete_views.samples[testIndices[j]])
 	ax.scatter(x,y,z,c='r',s=10)
+	plt.title('Test sample '+str(j)+': index '+str(testIndices[j]))
+	plt.show()
+	
+solver.net.blobs['data'].reshape(1,1200)
+solver.net.blobs['label'].reshape(1,1,30,30,30)
+for j in range(numTraining):
+	fig = plt.figure()
+	solver.net.blobs['data'].data[0,:] = features[trainIndices[j],:]
+	solver.net.forward()
+	output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
+	ax = fig.add_subplot(131, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	src = initialize_missing(partial_views.samples[trainIndices[j]])
+	x,y,z = numpy.nonzero(src)
+	color = src[x,y,z] * 2 - 1 
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
+	ax = fig.add_subplot(132, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(output>0.1)
+	color = output[x,y,z]
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
+	ax = fig.add_subplot(133, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(complete_views.samples[trainIndices[j]])
+	ax.scatter(x,y,z,c='r',s=10)
+	plt.title('Train sample '+str(j)+': index '+str(trainIndices[j]))
 	plt.show()

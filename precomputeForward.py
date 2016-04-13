@@ -28,8 +28,9 @@ solver.net.params['fc5'][1].data[...] = network.layers[4].c[0,:]
 
 def initialize_missing(data):
 	mask = data < 0
-	filler = numpy.random.rand(len(data[mask])) > 0.1
-	res = data.copy()
+#	filler = numpy.random.rand(len(data[mask])) > 0.1
+	filler = numpy.ones(len(data[mask])) * 0.5
+	res = numpy.array(data,dtype=numpy.float32)
 	res[mask] = filler
 	return res
 

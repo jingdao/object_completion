@@ -1,9 +1,14 @@
 import sys
 import time
 import caffe
-caffe.set_mode_cpu()
+import os
+if os.system('nvcc --version') == 0:
+	caffe.set_mode_gpu()
+else:
+	caffe.set_mode_cpu()
 from importWeights import *
 from importViews import *
+import matplotlib.cm as cm
 
 class termcolors:
 	normal = '\033[0m'
@@ -25,12 +30,14 @@ def comparePlots(obj1,obj2,obj3):
 	ax.scatter(x,y,z,c='r',s=10)
 	plt.show()
 
+debugSingleSample=True
+
 network = Model("data/finetuned_model.txt")
-partial_views = GridData('data/partial_view.data','data/labels.data')
-complete_views = GridData('data/complete_view.data','data/labels.data')
+partial_views = GridData('data/table_partial.data','data/table_labels.data')
+complete_views = GridData('data/table_complete.data','data/table_labels.data')
 solver = caffe.SGDSolver('architecture/Net3DReg_solver.prototxt')
 print(termcolors.red+'initialized solver'+termcolors.normal)
-batchsize = 1;
+batchsize = 2;
 solver.net.blobs['data'].reshape(batchsize,1,30,30,30)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
 solver.test_nets[0].blobs['data'].reshape(batchsize,1,30,30,30)
@@ -69,62 +76,118 @@ solver.net.params['b_conv1'][1].data[...] = b.transpose().reshape((1,-1)).mean()
 
 def initialize_missing(data):
 	mask = data < 0
-	filler = numpy.random.rand(len(data[mask])) > 0.9
-	res = data.copy()
+#	filler = numpy.random.rand(len(data[mask])) > 0.9
+	filler = numpy.ones(len(data[mask])) * 0.5
+	res = numpy.array(data,dtype=numpy.float32)
 	res[mask] = filler
 	return res
 
-print(termcolors.yellow+'forward pass'+termcolors.normal)
-
-
-'''
-loss = solver.net.forward()
-outputData = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
-print loss
-comparePlots(inputData,outputData,referenceData)
-'''
-
-niter = 200
-test_interval = 25
-# losses will also be stored in the log
+trainIndices = []
+testIndices = []
+while (len(testIndices) < batchsize):
+	r = numpy.random.randint(complete_views.num_samples)
+	if not r in testIndices:
+		testIndices.append(r)
+if debugSingleSample:
+	while (len(trainIndices) < batchsize):
+		r = numpy.random.randint(complete_views.num_samples)
+		if not r in trainIndices:
+			trainIndices.append(r)
+else:
+	for i in range(complete_views.num_samples):
+		if not i in testIndices:
+			trainIndices.append(i)
+numTraining = len(trainIndices)
+numTesting = len(testIndices)
+for i in range(batchsize):
+	inputData = initialize_missing(partial_views.samples[testIndices[i]])
+	referenceData = complete_views.samples[testIndices[i]]
+	solver.test_nets[0].blobs['data'].data[i,:] = inputData
+	solver.test_nets[0].blobs['label'].data[i,0,:,:,:] = referenceData
+	
+print(termcolors.yellow+'forward pass '+str(numTraining)+' training '+str(numTesting)+' testing samples'+termcolors.normal)
+niter = 100
+test_interval = 20
 train_loss = numpy.zeros(niter)
-test_acc = numpy.zeros(int(numpy.ceil(niter / test_interval)))
-output = numpy.zeros((niter, 8, 10))
-
-# the main solver loop
-solver.net.blobs['data'].data[0,0,:,:,:] = partial_views.samples[0]
-solver.net.blobs['label'].data[0,0,:,:,:] = complete_views.samples[0]
+test_loss = numpy.zeros(niter/test_interval)
 for it in range(niter):
 	for j in range(batchsize):
-		id = (it * batchsize + j) % partial_views.num_samples
+		id = trainIndices[(it * batchsize + j) % numTraining]
 		inputData = initialize_missing(partial_views.samples[id])
 		referenceData = complete_views.samples[id]
-		solver.net.blobs['data'].data[j,0,:,:,:] = inputData
+		solver.net.blobs['data'].data[j,:] = inputData
 		solver.net.blobs['label'].data[j,0,:,:,:] = referenceData
 	start = time.clock()
 	solver.step(1)  # SGD by Caffe
 	end = time.clock()
-	#loss = solver.net.forward()
-	#solver.net.backward()
-    
+
     # store the train loss
 	train_loss[it] = solver.net.blobs['loss'].data
-	print it,end-start,train_loss[it]
-'''
-    # store the output on the first test batch
-    # (start the forward pass at conv1 to avoid loading new data)
-    solver.test_nets[0].forward(start='conv1')
-    output[it] = solver.test_nets[0].blobs['score'].data[:8]
-    
-    # run a full test every so often
-    # (Caffe can also do this for us and write to a log, but we show here
-    #  how to do it directly in Python, where more complicated things are easier.)
-    if it % test_interval == 0:
-        print 'Iteration', it, 'testing...'
-        correct = 0
-        for test_it in range(100):
-            solver.test_nets[0].forward()
-            correct += sum(solver.test_nets[0].blobs['score'].data.argmax(1)
-                           == solver.test_nets[0].blobs['label'].data)
-        test_acc[it // test_interval] = correct / 1e4
-	'''
+	if it % test_interval == 0:
+		test_loss[it/test_interval] = solver.test_nets[0].blobs['loss'].data
+
+fig = plt.figure()
+plt.subplot(2,1,1)
+plt.plot(train_loss)
+plt.subplot(2,1,2)
+plt.plot(test_loss)
+plt.show()
+
+for j in range(batchsize):
+	fig = plt.figure()
+	output = solver.test_nets[0].blobs['act_b_conv1'].data[j,0,:,:,:]
+	ax = fig.add_subplot(131, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	src = initialize_missing(partial_views.samples[testIndices[j]])
+	x,y,z = numpy.nonzero(src)
+	color = src[x,y,z] * 2 - 1 
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
+	ax = fig.add_subplot(132, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(output>0.1)
+	color = output[x,y,z]
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
+	ax = fig.add_subplot(133, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(complete_views.samples[testIndices[j]])
+	ax.scatter(x,y,z,c='r',s=10)
+	plt.title('Test sample '+str(j)+': index '+str(testIndices[j]))
+	plt.show()
+	
+solver.net.blobs['data'].reshape(1,1,30,30,30)
+solver.net.blobs['label'].reshape(1,1,30,30,30)
+for j in range(numTraining):
+	fig = plt.figure()
+	src = initialize_missing(partial_views.samples[trainIndices[j]])
+	solver.net.blobs['data'].data[0,:] = src
+	solver.net.forward()
+	output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
+	ax = fig.add_subplot(131, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(src)
+	color = src[x,y,z] * 2 - 1 
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
+	ax = fig.add_subplot(132, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(output>0.1)
+	color = output[x,y,z]
+	ax.scatter(x,y,z,c=cm.jet(color),s=10)
+	ax = fig.add_subplot(133, projection='3d')
+	ax.set_xlim(0,30)
+	ax.set_ylim(0,30)
+	ax.set_zlim(0,30)
+	x,y,z = numpy.nonzero(complete_views.samples[trainIndices[j]])
+	ax.scatter(x,y,z,c='r',s=10)
+	plt.title('Train sample '+str(j)+': index '+str(trainIndices[j]))
+	plt.show()
+
