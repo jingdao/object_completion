@@ -35,7 +35,9 @@ debugSingleSample=False
 network = Model("data/finetuned_model.txt")
 partial_views = GridData('data/table_partial.data','data/table_labels.data')
 complete_views = GridData('data/table_complete.data','data/table_labels.data')
-solver = caffe.SGDSolver('architecture/Net3DReg_solver.prototxt')
+
+solver_path = sys.argv[1]
+solver = caffe.SGDSolver(solver_path)
 print(termcolors.red+'initialized solver'+termcolors.normal)
 batchsize = 10;
 test_batchsize = 900
@@ -47,7 +49,7 @@ solver.test_nets[0].blobs['label'].reshape(test_batchsize,1,30,30,30)
 # import weights
 print(termcolors.blue+'assign weights'+termcolors.normal)
 
-path_net = sys.argv[1]
+path_net = sys.argv[2]
 solver.net.copy_from(path_net)
 solver.test_nets[0].copy_from(path_net)
 

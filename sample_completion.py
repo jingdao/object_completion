@@ -35,7 +35,10 @@ debugSingleSample=False
 network = Model("data/finetuned_model.txt")
 partial_views = GridData('data/table_partial.data','data/table_labels.data')
 complete_views = GridData('data/table_complete.data','data/table_labels.data')
-solver = caffe.SGDSolver('architecture/Net3DReg_solver.prototxt')
+
+
+solver_path = sys.argv[1]
+solver = caffe.SGDSolver(solver_path)
 print(termcolors.red+'initialized solver'+termcolors.normal)
 batchsize = 10
 test_batchsize = 900
