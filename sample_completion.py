@@ -145,6 +145,7 @@ for it in range(niter):
 		plt.subplot(2,1,2)
 		plt.plot(range(it/test_interval), test_loss[0:it/test_interval], hold = False)
 		plt.draw()
+		plt.savefig('error')
 		plt.pause(0.01)
 
 	if it * batchsize % numTraining == 0: # Resample Training index per epoch
