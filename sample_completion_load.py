@@ -37,7 +37,7 @@ partial_views = GridData('data/table_partial.data','data/table_labels.data')
 complete_views = GridData('data/table_complete.data','data/table_labels.data')
 solver = caffe.SGDSolver('architecture/Net3DReg_solver.prototxt')
 print(termcolors.red+'initialized solver'+termcolors.normal)
-batchsize = 10
+batchsize = 10;
 test_batchsize = 900
 solver.net.blobs['data'].reshape(batchsize,1,30,30,30)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
@@ -46,35 +46,11 @@ solver.test_nets[0].blobs['label'].reshape(test_batchsize,1,30,30,30)
 
 # import weights
 print(termcolors.blue+'assign weights'+termcolors.normal)
-for i in range(network.layers[1].w.shape[0]):
-	solver.net.params['conv1'][0].data[i,0,:,:,:] = network.layers[1].w[i,:,:,:]
-solver.net.params['conv1'][1].data[...] = network.layers[1].c[:,0]
-for i in range(network.layers[2].w.shape[0]):
-	for j in range(network.layers[2].w.shape[4]):
-		solver.net.params['conv2'][0].data[i,j,:,:,:] = network.layers[2].w[i,:,:,:,j]
-solver.net.params['conv2'][1].data[...] = network.layers[2].c[:,0]
-for i in range(network.layers[3].w.shape[0]):
-	for j in range(network.layers[3].w.shape[4]):
-		solver.net.params['conv3'][0].data[i,j,:,:,:] = network.layers[3].w[i,:,:,:,j]
-solver.net.params['conv3'][1].data[...] = network.layers[3].c[:,0]
-solver.net.params['fc5'][0].data[...] = network.layers[4].w.transpose()
-solver.net.params['fc5'][1].data[...] = network.layers[4].c[0,:]
-solver.net.params['b_fc5'][0].data[...] = network.layers[4].dw
-solver.net.params['b_fc5'][1].data[...] = network.layers[4].b[0,:]
-for i in range(network.layers[3].dw.shape[0]):
-	for j in range(network.layers[3].dw.shape[4]):
-		solver.net.params['b_conv3'][0].data[i,j,:,:,:] = network.layers[3].dw[i,:,:,:,j]
-b = network.layers[3].b
-solver.net.params['b_conv3'][1].data[...] = b.transpose().reshape((b.shape[3],-1)).mean(axis=1)
-for i in range(network.layers[2].dw.shape[0]):
-	for j in range(network.layers[2].dw.shape[4]):
-		solver.net.params['b_conv2'][0].data[i,j,:,:,:] = network.layers[2].dw[i,:,:,:,j]
-b = network.layers[2].b
-solver.net.params['b_conv2'][1].data[...] = b.transpose().reshape((b.shape[3],-1)).mean(axis=1)
-for i in range(network.layers[1].dw.shape[0]):
-	solver.net.params['b_conv1'][0].data[i,0,:,:,:] = network.layers[1].dw[i,:,:,:]
-b = network.layers[1].b
-solver.net.params['b_conv1'][1].data[...] = b.transpose().reshape((1,-1)).mean()
+
+path_net = sys.argv[1]
+solver.net.copy_from(path_net)
+solver.test_nets[0].copy_from(path_net)
+
 
 def initialize_missing(data):
 	mask = data < 0
@@ -131,7 +107,7 @@ for it in range(niter):
 	solver.step(1)  # SGD by Caffe
 	end = time.clock()
 
-   # store the train loss
+    # store the train loss
 	train_loss[it] = solver.net.blobs['loss'].data
 	if it % test_interval == 0:
 		test_loss[it/test_interval] = solver.test_nets[0].blobs['loss'].data
@@ -161,6 +137,7 @@ plt.plot(test_loss)
 plt.show()
 
 plt.savefig('error')
+
 
 '''
 for j in range(batchsize):
