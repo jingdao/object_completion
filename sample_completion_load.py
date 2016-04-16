@@ -64,23 +64,8 @@ def initialize_missing(data):
 
 
 # Append Dataset
-trainIndices = []
-testIndices = []
-while (len(testIndices) < test_batchsize):
-	r = numpy.random.randint(complete_views.num_samples)
-	if not r in testIndices:
-		testIndices.append(r)
-
-if debugSingleSample:
-	while (len(trainIndices) < batchsize):
-		r = numpy.random.randint(complete_views.num_samples)
-		if not r in trainIndices:
-			trainIndices.append(r)
-else:
-	for i in range(complete_views.num_samples):
-		if not i in testIndices:
-			trainIndices.append(i)
-
+trainIndices = numpy.load('trainIndices.npy')
+testIndices = numpy.load('testIndices.npy')
 numTraining = len(trainIndices)
 numTesting = len(testIndices)
 for i in range(test_batchsize):
@@ -93,7 +78,7 @@ for i in range(test_batchsize):
 
 # Train	
 print(termcolors.yellow+'forward pass '+str(numTraining)+' training '+str(numTesting)+' testing samples'+termcolors.normal)
-niter = 5000
+niter = 50000
 test_interval = 20
 train_loss = numpy.zeros(niter)
 test_loss = numpy.zeros(niter/test_interval)

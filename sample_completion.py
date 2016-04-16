@@ -105,7 +105,8 @@ else:
 	for i in range(complete_views.num_samples):
 		if not i in testIndices:
 			trainIndices.append(i)
-
+numpy.save('trainIndices',trainIndices)
+numpy.save('testIndices',testIndices)
 numTraining = len(trainIndices)
 numTesting = len(testIndices)
 for i in range(test_batchsize):
