@@ -37,10 +37,10 @@ partial_views = GridData('data/table_partial.data','data/table_labels.data')
 complete_views = GridData('data/table_complete.data','data/table_labels.data')
 
 solver_path = sys.argv[1]
-solver = caffe.SGDSolver(solver_path)
+solver = caffe.AdamSolver(solver_path)
 print(termcolors.red+'initialized solver'+termcolors.normal)
 batchsize = 10;
-test_batchsize = 900
+test_batchsize = 400
 solver.net.blobs['data'].reshape(batchsize,1,30,30,30)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
 solver.test_nets[0].blobs['data'].reshape(test_batchsize,1,30,30,30)

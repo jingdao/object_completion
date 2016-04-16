@@ -162,8 +162,8 @@ layer {
   # learning rate and decay multipliers for the biases
   param { lr_mult: 2 decay_mult: 0 }
   inner_product_param {
-    weight_filler {
     num_output: 1200
+    weight_filler {
       type: "gaussian"
       std: 0.01
     }
