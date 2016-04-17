@@ -78,7 +78,7 @@ for i in range(test_batchsize):
 
 # Train	
 print(termcolors.yellow+'forward pass '+str(numTraining)+' training '+str(numTesting)+' testing samples'+termcolors.normal)
-niter = 50000
+niter = 100000
 test_interval = 20
 train_loss = numpy.zeros(niter)
 test_loss = numpy.zeros(niter/test_interval)
