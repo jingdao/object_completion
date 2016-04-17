@@ -123,6 +123,7 @@ niter = 100000
 test_interval = 20
 train_loss = numpy.zeros(niter)
 test_loss = numpy.zeros(niter/test_interval)
+test_loss_all = numpy.zeros(niter)
 for it in range(niter):
 	for j in range(batchsize):
 		id = trainIndices[(it * batchsize + j) % numTraining]
@@ -137,6 +138,9 @@ for it in range(niter):
 
    # store the train loss
 	train_loss[it] = solver.net.blobs['loss'].data
+        test_loss_all[it] = solver.test_nets[0].blobs['loss'].data
+        numpy.save('trainLoss', train_loss)
+        numpy.save('testLoss', test_loss_all)
 	if it % test_interval == 0:
 		test_loss[it/test_interval] = solver.test_nets[0].blobs['loss'].data
 
