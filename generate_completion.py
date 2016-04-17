@@ -55,4 +55,4 @@ for j in range(10):
 	x,y,z = numpy.nonzero(complete_views.samples[id])
 	ax.scatter(x,y,z,c='r',s=10)
 	plt.title('Completion sample '+str(j)+': index '+str(id))
-	plt.show()
+        fig.savefig('completion.png')
