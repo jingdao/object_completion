@@ -29,13 +29,15 @@ solver.net.copy_from(path_net)
 
 for j in range(10):
 	id = numpy.random.randint(complete_views.num_samples)
-	fig = plt.figure()
 	src = initialize_missing(partial_views.samples[id])
 	solver.net.blobs['data'].data[0,0,:,:,:] = src
 	visible = numpy.array(src == 1,dtype=numpy.float)
 	mask = numpy.array(src == 0.5,dtype=numpy.float)
 	solver.net.forward()
 	output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:] * mask + visible
+	input_err = numpy.linalg.norm(complete_views.samples[id] - visible)**2 / 2
+	output_err = numpy.linalg.norm(complete_views.samples[id] - output)**2 / 2
+	fig = plt.figure()
 	ax = fig.add_subplot(131, projection='3d')
 	ax.set_xlim(0,30)
 	ax.set_ylim(0,30)
@@ -43,7 +45,8 @@ for j in range(10):
 	x,y,z = numpy.nonzero(visible)
 	color = src[x,y,z] * 2 - 1 
 	ax.scatter(x,y,z,c=cm.jet(color),s=10)
-	plt.title('Input error: '+str(numpy.linalg.norm(complete_views.samples[id] - visible)**2))
+	#plt.title('Input error: '+str(numpy.linalg.norm(complete_views.samples[id] - visible)**2))
+	print 'Input error: '+str(input_err)
 	ax = fig.add_subplot(132, projection='3d')
 	ax.set_xlim(0,30)
 	ax.set_ylim(0,30)
@@ -51,7 +54,8 @@ for j in range(10):
 	x,y,z = numpy.nonzero(output>0.1)
 	color = output[x,y,z]
 	ax.scatter(x,y,z,c=cm.jet(color),s=10)
-	plt.title('Output error: '+str(numpy.linalg.norm(complete_views.samples[id] - output)**2))
+	#plt.title('Output error: '+str(numpy.linalg.norm(complete_views.samples[id] - output)**2))
+	print 'Output error: '+str(output_err)
 	ax = fig.add_subplot(133, projection='3d')
 	ax.set_xlim(0,30)
 	ax.set_ylim(0,30)
@@ -59,5 +63,5 @@ for j in range(10):
 	x,y,z = numpy.nonzero(complete_views.samples[id])
 	ax.scatter(x,y,z,c='r',s=10)
 	#plt.title('Completion sample '+str(j)+': index '+str(id))
-	plt.title('Ground truth')
+	print 'Completion sample '+classname+': index '+str(id)
 	plt.show()

@@ -37,19 +37,29 @@ for classname in classes:
 	class_error = numpy.zeros(class_samples)
 	for i in range(class_samples):
 		src = initialize_missing(partial_views.samples[i])
+		visible = numpy.array(src == 1,dtype=numpy.float)
+		mask = numpy.array(src == 0.5,dtype=numpy.float)
 		solver.net.blobs['data'].data[0,0,:,:,:] = src
 		solver.net.blobs['label'].data[0,0,:,:,:] = complete_views.samples[i]
 		if use_mask:
-			solver.net.blobs['visible'].data[0,0,:,:,:] = numpy.array(src == 1,dtype=numpy.float)
-			solver.net.blobs['mask'].data[0,0,:,:,:] = numpy.array(src == 0.5,dtype=numpy.float)
+			solver.net.blobs['visible'].data[0,0,:,:,:] = visible
+			solver.net.blobs['mask'].data[0,0,:,:,:] = mask
 		solver.net.forward()
-		class_error[i] = float(solver.net.blobs['loss'].data)
+		output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:] * mask + visible
+		#output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
+		class_error[i] = numpy.linalg.norm(complete_views.samples[i] - output)**2 / 2
+		#class_error[i] = float(solver.net.blobs['loss'].data)
+	numpy.save('results/'+classname+'_test_error',class_error)
 	min_err = numpy.min(class_error)
 	min_id = numpy.argmin(class_error)
 	max_err = numpy.max(class_error)
 	max_id = numpy.argmax(class_error)
 	mean_err = numpy.mean(class_error)
+	err25 = numpy.percentile(class_error,25)
+	err50 = numpy.percentile(class_error,50)
+	err75 = numpy.percentile(class_error,75)
 	avg_error += mean_err
-	print '%s(%d): %.0f(%d) min %.0f(%d) max %.0f avg' % (classname,class_samples,min_err,min_id,max_err,max_id,mean_err)
+	#print '%s(%d): %.0f(%d) min %.0f(%d) max %.0f avg' % (classname,class_samples,min_err,min_id,max_err,max_id,mean_err)
+	print '%s %.0f %.0f %.0f %.0f %.0f' % (classname,min_err,err25,err50,err75,max_err)
 
 print 'Average: '+str(avg_error / len(classes))
