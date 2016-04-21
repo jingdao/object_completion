@@ -33,7 +33,6 @@ plt.clf()
 plt1200, = plt.plot(epochs, te1200, '-', label='FC of size 1200')
 plt12000, = plt.plot(epochs, te12000, '-', label='FC of size 12000')
 plt1200_1200, = plt.plot(epochs, te1200_1200, '-', label='FC of size 1200*1200')
+plt.legend(handles=[plt1200, plt12000, plt1200_1200])
 plt.savefig('test.png')
 plt.clf()
-
-

@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def sample(input, step):
+    return [input[i] for i in range(len(input)) if i % step == 0]
+
 test1200 = np.load('testLoss1200.npy')
 train1200 = np.load('trainLoss1200.npy')
 te1200 = sample(test1200, 2000)
@@ -33,5 +36,4 @@ plt1200_1200, = plt.plot(epochs, te1200_1200, '-', label='FC of size 1200*1200')
 plt.savefig('test.png')
 plt.clf()
 
-def sample(input, step):
-    return [input[i] for i in range(len(input)) if i % step == 0]
+
