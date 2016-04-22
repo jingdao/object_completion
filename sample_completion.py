@@ -41,7 +41,7 @@ solver_path = sys.argv[1]
 solver = caffe.AdamSolver(solver_path)
 print(termcolors.red+'initialized solver'+termcolors.normal)
 batchsize = 10
-test_batchsize = int(0.1 * partial_view.num_samples)
+test_batchsize = int(0.1 * partial_views.num_samples)
 validation_batchsize = min(test_batchsize,400)
 solver.net.blobs['data'].reshape(batchsize,1,30,30,30)
 solver.net.blobs['label'].reshape(batchsize,1,30,30,30)
