@@ -33,8 +33,8 @@ def comparePlots(obj1,obj2,obj3):
 debugSingleSample=False
 
 network = Model("data/finetuned_model.txt")
-partial_views = GridData('data/table_partial.data','data/table_labels.data')
-complete_views = GridData('data/table_complete.data','data/table_labels.data')
+partial_views = GridData('data/partial_view.data','data/labels.data')
+complete_views = GridData('data/complete_view.data','data/labels.data')
 
 
 solver_path = sys.argv[1]
