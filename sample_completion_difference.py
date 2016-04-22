@@ -158,10 +158,3 @@ for it in range(niter):
 	if it > 0 and it % int(numTraining/batchsize) == 0 and not debugSingleSample: # Resample Training index per epoch
 		trainIndices = numpy.random.permutation(trainIndices)
 		
-fig = plt.figure()
-plt.subplot(2,1,1)
-plt.plot(train_loss)
-plt.subplot(2,1,2)
-plt.plot(test_loss)
-plt.show()
-plt.savefig('results/error')
