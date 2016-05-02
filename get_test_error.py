@@ -20,6 +20,11 @@ solver = caffe.AdamSolver(solver_path)
 path_net = sys.argv[2]
 solver.net.copy_from(path_net)
 use_mask = 'mask' in solver.net.blobs.keys()
+use_testset = True
+if use_testset:
+	data_folder = 'data/test_separate_class_correct_view/'
+else:
+	data_folder = 'data/separate_class_correct_view/'
 solver.net.blobs['data'].reshape(1,1,30,30,30)
 solver.net.blobs['label'].reshape(1,1,30,30,30)
 if use_mask:
@@ -28,10 +33,11 @@ if use_mask:
 
 classes = ['bathtub','bed','chair','desk','dresser','monitor','night_stand','sofa','table','toilet']
 
-avg_error = 0
+overall_error = []
+comp_time = []
 for classname in classes:
-	partial_views = GridData('data/test_separate_class_correct_view/'+classname+'_partial.data','data/test_separate_class_correct_view/'+classname+'_labels.data')
-	complete_views = GridData('data/test_separate_class_correct_view/'+classname+'_complete.data','data/test_separate_class_correct_view/'+classname+'_labels.data')
+	partial_views = GridData(data_folder+classname+'_partial.data',data_folder+classname+'_labels.data')
+	complete_views = GridData(data_folder+classname+'_complete.data',data_folder+classname+'_labels.data')
 	
 	class_samples = partial_views.num_samples
 	class_error = numpy.zeros(class_samples)
@@ -44,7 +50,10 @@ for classname in classes:
 		if use_mask:
 			solver.net.blobs['visible'].data[0,0,:,:,:] = visible
 			solver.net.blobs['mask'].data[0,0,:,:,:] = mask
+		start = time.clock()
 		solver.net.forward()
+		end = time.clock()
+		comp_time.append(end-start)
 		output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:] * mask + visible
 		#output = solver.net.blobs['act_b_conv1'].data[0,0,:,:,:]
 		class_error[i] = numpy.linalg.norm(complete_views.samples[i] - output)**2 / 2
@@ -58,8 +67,14 @@ for classname in classes:
 	err25 = numpy.percentile(class_error,25)
 	err50 = numpy.percentile(class_error,50)
 	err75 = numpy.percentile(class_error,75)
-	avg_error += mean_err
-	#print '%s(%d): %.0f(%d) min %.0f(%d) max %.0f avg' % (classname,class_samples,min_err,min_id,max_err,max_id,mean_err)
-	print '%s %.0f %.0f %.0f %.0f %.0f' % (classname,min_err,err25,err50,err75,max_err)
+	overall_error.extend(class_error)
+	print '%s,%.0f,%.0f,%.0f,%.0f,%.0f' % (classname,min_err,err25,err50,err75,max_err)
 
-print 'Average: '+str(avg_error / len(classes))
+min_err = numpy.min(overall_error)
+max_err = numpy.max(overall_error)
+err25 = numpy.percentile(overall_error,25)
+err50 = numpy.percentile(overall_error,50)
+err75 = numpy.percentile(overall_error,75)
+overall_error.extend(overall_error)
+print 'overall,%.0f,%.0f,%.0f,%.0f,%.0f' % (min_err,err25,err50,err75,max_err)
+print 'completion time: %f avg (%d samples)' % (numpy.mean(comp_time),len(comp_time))
